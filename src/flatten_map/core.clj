@@ -1,4 +1,5 @@
 (ns flatten-map.core
+  (:require [cheshire.core :as jp])
   (:gen-class))
 
 (defn get-key
@@ -10,22 +11,22 @@
 
 (defn flatten-kvs
   "Flatten the map and returns result"
-  ([m] (flatten (flatten-kvs m nil)))
+  ([m] (flatten-kvs m nil))
   ([m prefix]
    (reduce
      (fn [l [k v]]
        (cond
-         (map? v) (concat l (flatten (flatten-kvs v (get-key prefix (name k)))))
-         (vector? v) (apply conj l
-                            (if (zero? (count v))
-                              (conj l [(get-key prefix (name k)) nil])
-                              (mapv
-                                #(concat [] (if (or (map? %) (vector? %))
-                                              (flatten (flatten-kvs % (get-key prefix (name k))))
-                                              (conj l [(get-key prefix (name k)) %])))
-                               v)))
-         :else (conj l [(get-key prefix (name k)) v])))
-     [] m)))
+         (map? v) (concat l (flatten-kvs v (get-key prefix (name k))))
+         (vector? v) (flatten (concat l
+                                (if (zero? (count v))
+                                  [(get-key prefix (name k)) nil]
+                                  (mapv
+                                    #(concat [] (if (or (map? %) (vector? %))
+                                                  (flatten-kvs % (get-key prefix (name k)))
+                                                  (conj l [(get-key prefix (name k)) %])))
+                                   v))))
+         :else (concat l [(get-key prefix (name k)) v])))
+    [] m)))
 
 (defn list->map
   "Converts a list into map by pairing up elements"
